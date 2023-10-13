@@ -128,7 +128,7 @@ sub on_message {
     my $request_number = $c->app->stat->{cumulative_connection_requests}++;
     my $conn_number = $c->app->stat->{cumulative_client_connections};
     $req_storage->{cid} = sprintf("%s_%s:%s_%s:%s", $c->server_name, $$, $conn_number, $request_number, time);
-    $req_storage->{logger} = Binary::RequestLogger->new(req_storage => $req_storage);
+    $req_storage->{logger} = Mojo::WebSocketProxy::RequestLogger->new(req_storage => $req_storage);
     # We still want to run any hooks even for invalid requests.
     if (my $err = Mojo::WebSocketProxy::Parser::parse_req($c, $req_storage)) {
         $c->send({json => $err}, $req_storage);
