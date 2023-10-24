@@ -24,7 +24,7 @@ BUILD {
 }
 
 method infof ($message) {
-    $handler->($context, $message);
+    $handler->($context, $message, 'infof');
 }
 
 1;
