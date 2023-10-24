@@ -5,13 +5,26 @@ class Mojo::WebSocketProxy::RequestLogger;
 use strict;
 use warnings;
 use Log::Any qw($log);
+use UUID::Tiny;
 
-field $req_storage: param;
+field $context; 
+
+our $handler = sub {
+    my ($context, $message) = @_;
+    $log->warn($message, $context);
+};
+
+sub set_handler {
+    my ($self, $h) = @_;
+    $handler = $h;
+} 
+
+BUILD {
+    $context->{cid} = UUID::Tiny::create_UUID_as_string(UUID::Tiny::UUID_V4);
+}
 
 method infof ($message) {
-    $log->adapter->set_context($req_storage->{cid});
-    $log->infof($message);
-    $log->adapter->clear_context;
+    $handler->($context, $message);
 }
 
 1;
