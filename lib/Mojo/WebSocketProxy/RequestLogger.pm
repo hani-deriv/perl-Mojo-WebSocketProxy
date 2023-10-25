@@ -10,8 +10,13 @@ use UUID::Tiny;
 field $context; 
 
 our $handler = sub {
-    my ($context, $message) = @_;
-    $log->warn($message, $context);
+    my ($level, $message, $context, @params) = @_;
+    
+    if(scalar @params) {
+        return $log->$level($message, @params);
+    }
+
+    return $log->$level($message, $context);
 };
 
 sub set_handler {
@@ -23,8 +28,12 @@ BUILD {
     $context->{cid} = UUID::Tiny::create_UUID_as_string(UUID::Tiny::UUID_V4);
 }
 
-method infof ($message) {
-    $handler->($context, $message, 'infof');
+method infof ($message, @params) {
+    $handler->('infof', $message, $context, @params);
+}
+
+method info($message) {
+    $handler->('info', $message, $context);
 }
 
 1;
