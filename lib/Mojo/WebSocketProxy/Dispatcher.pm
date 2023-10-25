@@ -9,17 +9,19 @@ use Mojo::WebSocketProxy::Config;
 
 use Class::Method::Modifiers;
 
-use JSON::MaybeUTF8 qw(:v1);
+use JSON::MaybeUTF8    qw(:v1);
 use Unicode::Normalize ();
 use Future::Mojo 0.004;    # ->new_timeout
 use Future::Utils qw(fmap);
-use Scalar::Util qw(blessed);
+use Scalar::Util  qw(blessed);
 use Encode;
 use DataDog::DogStatsd::Helper qw(stats_inc);
 
 use constant TIMEOUT => $ENV{MOJO_WEBSOCKETPROXY_TIMEOUT} || 15;
 
-## VERSION
+use Mojo::WebSocketProxy::RequestLogger;
+
+our $VERSION = '0.14';     ## VERSION
 around 'send' => sub {
     my ($orig, $c, $api_response, $req_storage) = @_;
 
@@ -122,7 +124,11 @@ sub on_message {
 
     my $req_storage = {};
     $req_storage->{args} = $args;
-
+    
+    my $request_number = $c->app->stat->{cumulative_connection_requests}++;
+    my $conn_number = $c->app->stat->{cumulative_client_connections};
+    $req_storage->{cid} = sprintf("%s_%s:%s_%s:%s", $c->server_name, $$, $conn_number, $request_number, time);
+    $req_storage->{logger} = Mojo::WebSocketProxy::RequestLogger->new(req_storage => $req_storage);
     # We still want to run any hooks even for invalid requests.
     if (my $err = Mojo::WebSocketProxy::Parser::parse_req($c, $req_storage)) {
         $c->send({json => $err}, $req_storage);
@@ -293,8 +299,6 @@ Handle message - parse and dispatch request messages.
 Dispatching action and forward to RPC server. Note that all
 incoming JSON messages are first normalised using
 L<NFC|https://www.w3.org/International/articles/unicode-migration/#normalization>.
- 
-
 
 =head2 before_forward
 
